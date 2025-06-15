@@ -21,7 +21,7 @@ jobs:
 - job: StreamMonitor
   timeoutInMinutes: 10
   steps:
-
+  
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.9'
@@ -32,7 +32,7 @@ jobs:
       key: 'pip | "$(Agent.OS)" | requirements.txt'
       path: $(PIP_CACHE_DIR)
       cacheHitVar: 'PIP_CACHE_RESTORED'
-
+  
   - script: |
       pip install --upgrade pip
       pip install -r requirements.txt
@@ -54,7 +54,7 @@ jobs:
       TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
       TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
     displayName: 'Run and notify'
-
+    
   - script: |
       if [ $(Agent.JobStatus) == "Succeeded" ]; then
         STATUS="🟢 SUCCESS"

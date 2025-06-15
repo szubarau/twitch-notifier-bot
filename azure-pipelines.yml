@@ -1,19 +1,76 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# .azure/pipelines/azure-pipelines.yml
+name: $(Date:yyyyMMdd)$(Rev:.r)
+trigger: none  # Отключаем триггеры, т.к. используем только расписание
 
-trigger:
-- main
+schedules:
+- cron: "*/5 * * * *"  # Запуск каждые 5 минут (максимально часто)
+  displayName: "Twitch Stream Check"
+  branches:
+    include: [main]
+  always: true  # Форсированный запуск
+
+variables:
+- group: twitch_bot_secrets
+- name: PIP_CACHE_DIR
+  value: $(Pipeline.Workspace)/.pip-cache
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+jobs:
+- job: StreamMonitor
+  timeoutInMinutes: 10  # Лимит времени выполнения
+  steps:
+  
+  # Установка Python
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.9'
+      addToPath: true
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  # Кэширование зависимостей
+  - task: Cache@2
+    inputs:
+      key: 'pip | "$(Agent.OS)" | requirements.txt'
+      path: $(PIP_CACHE_DIR)
+      cacheHitVar: 'PIP_CACHE_RESTORED'
+  
+  # Установка пакетов
+  - script: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    displayName: 'Install dependencies'
+    condition: ne(variables.PIP_CACHE_RESTORED, 'true')
+
+  # Основной запуск бота
+  - script: |
+      python src/main.py >> bot.log 2>&1 &
+      sleep 60  # Даем боту время на инициализацию
+      
+      # Отправка статуса запуска
+      curl -s -X POST "https://api.telegram.org/bot$(TELEGRAM_BOT_TOKEN)/sendMessage" \
+        -d "chat_id=$(TELEGRAM_CHANNEL_ID)" \
+        -d "text=🟢 Pipeline $(Build.BuildNumber) started successfully"
+    env:
+      TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
+      TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)
+      TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
+      TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
+    displayName: 'Run and notify'
+    
+  # Всегда отправляем финальный статус
+  - script: |
+      if [ $(Agent.JobStatus) == "Succeeded" ]; then
+        STATUS="🟢 SUCCESS"
+      else
+        STATUS="🔴 FAILED"
+        cat bot.log  # Вывод логов при ошибке
+      fi
+      
+      curl -s -X POST "https://api.telegram.org/bot$(TELEGRAM_BOT_TOKEN)/sendMessage" \
+        -d "chat_id=$(TELEGRAM_CHANNEL_ID)" \
+        -d "text=$(STATUS) Pipeline $(Build.BuildNumber)
+Duration: $(Pipeline.Duration)
+Logs: $(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
+    condition: always()
+    displayName: 'Send final status'

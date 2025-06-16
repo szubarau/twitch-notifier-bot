@@ -67,7 +67,7 @@ jobs:
     # === Запуск Twitch-бота ===
     - script: |
         echo "Running Twitch bot..."
-        python src/main.py
+        PYTHONPATH=src python src/main.py
       displayName: 'Run Twitch Bot'
       env:
         TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)

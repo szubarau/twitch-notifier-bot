@@ -1,16 +1,20 @@
-# .azure/pipelines/azure-pipelines.yml
+parameters:
+- name: botScriptPath
+  type: string
+  default: 'src/main.py'
+
 name: $(Date:yyyyMMdd)$(Rev:.r)
 trigger: none
 
 schedules:
-- cron: "*/5 * * * *"  # Проверка каждые 5 минут
-  displayName: "Twitch Stream Check"
+- cron: "*/15 * * * *"
+  displayName: "Bot Scheduler"
   branches:
     include: [main]
   always: true
 
 variables:
-- group: twitch_bot_secrets  # Подключение переменных
+- group: twitch_bot_secrets
 - name: PIP_CACHE_DIR
   value: $(Pipeline.Workspace)/.pip-cache
 
@@ -18,34 +22,32 @@ pool:
   vmImage: 'ubuntu-latest'
 
 jobs:
-- job: StreamMonitor
-  timeoutInMinutes: 10  # Лимит выполнения
+- job: RunBot
+  timeoutInMinutes: 10
   steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.9'
+        addToPath: true
 
-  # Установка Python
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.9'
-      addToPath: true
+    - task: Cache@2
+      inputs:
+        key: 'pip | "$(Agent.OS)" | requirements.txt | $(hashFiles("**/requirements.txt"))'
+        path: $(PIP_CACHE_DIR)
+        restoreKeys: |
+          pip | "$(Agent.OS)" | requirements.txt
 
-  # Кэширование зависимостей
-  - task: Cache@2
-    inputs:
-      key: 'pip | "$(Agent.OS)" | requirements.txt'
-      path: $(PIP_CACHE_DIR)
+    - script: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install dependencies'
 
-  # Установка пакетов
-  - script: |
-      pip install --upgrade pip
-      pip install -r requirements.txt
-    displayName: 'Install dependencies'
-
-  # Основной запуск бота
-  - script: |
-      python src/main.py
-    env:
-      TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
-      TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)
-      TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
-      TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
-    displayName: 'Run Twitch Bot'
+    - script: |
+        echo "Running bot script: ${{ parameters.botScriptPath }}"
+        python ${{ parameters.botScriptPath }}
+      displayName: 'Run Bot Script'
+      env:
+        TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
+        TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)
+        TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
+        TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)

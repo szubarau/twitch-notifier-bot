@@ -1,14 +1,9 @@
-parameters:
-- name: botScriptPath
-  type: string
-  default: 'src/main.py'
-
 name: $(Date:yyyyMMdd)$(Rev:.r)
 trigger: none
 
 schedules:
-- cron: "*/15 * * * *"
-  displayName: "Bot Scheduler"
+- cron: "*/15 * * * *"  # Проверка каждые 15 минут
+  displayName: "Twitch Stream Check"
   branches:
     include: [main]
   always: true
@@ -22,32 +17,36 @@ pool:
   vmImage: 'ubuntu-latest'
 
 jobs:
-- job: RunBot
+- job: StreamMonitor
   timeoutInMinutes: 10
   steps:
+    # Установка Python
     - task: UsePythonVersion@0
       inputs:
         versionSpec: '3.9'
         addToPath: true
+      displayName: 'Use Python 3.9'
 
-    - task: Cache@2
-      inputs:
-        key: 'pip | "$(Agent.OS)" | requirements.txt | $(hashFiles("**/requirements.txt"))'
-        path: $(PIP_CACHE_DIR)
-        restoreKeys: |
-          pip | "$(Agent.OS)" | requirements.txt
+    # Универсальный шаблон кэширования pip
+    - template: templates/cache-pip.yml
+      parameters:
+        pipCachePath: '$(PIP_CACHE_DIR)'
 
+    # Установка зависимостей с использованием найденного файла
     - script: |
+        echo "Installing dependencies from $(REQ_PATH)"
         pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r "$(REQ_PATH)"
       displayName: 'Install dependencies'
 
+    # Запуск Twitch-бота
     - script: |
-        echo "Running bot script: ${{ parameters.botScriptPath }}"
-        python ${{ parameters.botScriptPath }}
-      displayName: 'Run Bot Script'
+        echo "Running Twitch bot..."
+        python src/main.py
+      displayName: 'Run Twitch Bot'
       env:
         TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
         TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)
         TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
         TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
+

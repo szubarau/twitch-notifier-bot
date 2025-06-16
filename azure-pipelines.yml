@@ -4,24 +4,34 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  python.version: '3.9'
+
 steps:
 - checkout: self
 
 - task: UsePythonVersion@0
   inputs:
-    versionSpec: '3.9'
+    versionSpec: $(python.version)
     addToPath: true
 
 - script: |
-    # Установка зависимостей
+    # Установка всех необходимых зависимостей
     python -m pip install --upgrade pip
-    pip install twitchio python-dotenv
+    pip install twitchio python-dotenv requests
     
-    # Создаем недостающие __init__.py
+    # Создаем __init__.py если их нет
+    mkdir -p src/bot
     touch src/__init__.py
     touch src/bot/__init__.py
     
-    # Запуск с правильными путями
+    # Проверяем структуру проекта
+    echo "Project structure:"
+    find . -name "*.py" | sort
+  displayName: 'Setup environment'
+
+- script: |
+    # Запускаем бота с правильными путями
     cd src
     PYTHONPATH=$(pwd)/.. python main.py
   displayName: 'Run Twitch Bot'

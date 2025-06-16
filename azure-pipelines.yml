@@ -1,47 +1,24 @@
-name: $(Date:yyyyMMdd)$(Rev:.r)
-trigger: none
-
-schedules:
-- cron: "*/15 * * * *"  # Проверка каждые 15 минут
-  displayName: "Twitch Stream Check"
-  branches:
-    include: [main]
-  always: true
-
-variables:
-- group: twitch_bot_secrets  # Подключение переменных из Variable Group
-- name: PIP_CACHE_DIR
-  value: $(Pipeline.Workspace)/.pip-cache
+trigger:
+- main
 
 pool:
   vmImage: 'ubuntu-latest'
 
-jobs:
-- job: StreamMonitor
-  timeoutInMinutes: 10
-  steps:
+steps:
+- checkout: self
 
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.9'
-      addToPath: true
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.9'
+    addToPath: true
 
-  - task: Cache@2
-    inputs:
-      key: 'pip | "$(Agent.OS)" | requirements.txt'
-      path: $(PIP_CACHE_DIR)
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r src/requirements.txt
+  displayName: 'Install dependencies'
 
-  - script: |
-      pip install --upgrade pip
-      pip install -r requirements.txt
-    displayName: 'Install dependencies'
-
-  - script: |
-      echo "Running Twitch bot..."
-      PYTHONPATH=src python src/main.py
-    env:
-      TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
-      TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)
-      TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
-      TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
-    displayName: 'Run Twitch Bot'
+- script: |
+    export PYTHONPATH="${PYTHONPATH}:$(System.DefaultWorkingDirectory)"
+    cd src
+    python -m main
+  displayName: 'Run Twitch Bot'

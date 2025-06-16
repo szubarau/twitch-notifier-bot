@@ -20,6 +20,7 @@ jobs:
 - job: StreamMonitor
   timeoutInMinutes: 10
   steps:
+
     # Установка Python
     - task: UsePythonVersion@0
       inputs:
@@ -27,19 +28,43 @@ jobs:
         addToPath: true
       displayName: 'Use Python 3.9'
 
-    # Универсальный шаблон кэширования pip
-    - template: templates/cache-pip.yml
-      parameters:
-        pipCachePath: '$(PIP_CACHE_DIR)'
+    # === Поиск и хэширование requirements.txt ===
+    - bash: |
+        FILE=$(find . -type f -name "requirements.txt" | head -n 1)
+        if [[ -f "$FILE" ]]; then
+          echo "Found requirements.txt at: $FILE"
+          HASH=$(sha256sum "$FILE" | cut -d ' ' -f1)
+          echo "##vso[task.setvariable variable=REQ_HASH]$HASH"
+          echo "##vso[task.setvariable variable=REQ_PATH]$FILE"
+        else
+          echo "No requirements.txt found"
+          echo "##vso[task.setvariable variable=REQ_HASH]no-file"
+          echo "##vso[task.setvariable variable=REQ_PATH]not-found"
+        fi
+      displayName: 'Find and hash requirements.txt'
 
-    # Установка зависимостей с использованием найденного файла
+    # === Кэширование pip ===
+    - task: Cache@2
+      inputs:
+        key: |
+          pip | "$(Agent.OS)" | requirements.txt | $(REQ_HASH)
+        path: $(PIP_CACHE_DIR)
+        restoreKeys: |
+          pip | "$(Agent.OS)" | requirements.txt
+      displayName: 'Cache pip dependencies'
+
+    # === Установка зависимостей ===
     - script: |
         echo "Installing dependencies from $(REQ_PATH)"
         pip install --upgrade pip
-        pip install -r "$(REQ_PATH)"
+        if [ "$(REQ_PATH)" != "not-found" ]; then
+          pip install -r "$(REQ_PATH)"
+        else
+          echo "requirements.txt not found — skipping install"
+        fi
       displayName: 'Install dependencies'
 
-    # Запуск Twitch-бота
+    # === Запуск Twitch-бота ===
     - script: |
         echo "Running Twitch bot..."
         python src/main.py
@@ -49,4 +74,3 @@ jobs:
         TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)
         TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
         TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
-

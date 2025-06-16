@@ -1,44 +1,52 @@
 trigger:
-- main
+  - main
 
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  nodeVersion: '18.x'
+  # Переменные токенов, клиент-идентификаторы и т.д.
+  TELEGRAM_BOT_TOKEN: '$(TELEGRAM_BOT_TOKEN)'
+  TWITCH_CLIENT_ID: '$(TWITCH_CLIENT_ID)'
+  TWITCH_CLIENT_SECRET: '$(TWITCH_CLIENT_SECRET)'
+  TELEGRAM_CHANNEL_ID: '$(TELEGRAM_CHANNEL_ID)'
+
 steps:
-- checkout: self
+  - task: UseNode@1
+    inputs:
+      version: $(nodeVersion)
+    displayName: 'Install Node.js'
 
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '3.9'
-    addToPath: true
+  - script: |
+      npm ci
+    displayName: 'Install dependencies'
 
-- script: |
-    # Установка всех зависимостей
-    pip install twitchio python-dotenv requests python-telegram-bot
-    
-    # Создаем правильную структуру пакетов
-    find src -type d -exec touch {}/__init__.py \;
-    
-    # Проверяем структуру проекта
-    echo "Project structure:"
-    find . -name "*.py" | sort
-    
-    # Проверяем пути Python
-    python -c "import sys; print('\n'.join(sys.path))"
-  displayName: 'Setup environment'
+  - script: |
+      npm run lint
+    displayName: 'Lint'
 
-- script: |
-    # Запускаем с правильными путями
-    cd src
-    PYTHONPATH=$(pwd)/.. python -c "
-    import sys
-    sys.path.insert(0, '$(pwd)/..')
-    from main import main
-    main()
-    "
-  displayName: 'Run Twitch Bot'
-  env:
-    TWITCH_BOT_TOKEN: $(TWITCH_BOT_TOKEN)
-    TWITCH_CHANNEL: $(TWITCH_CHANNEL)
-    TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
-    TELEGRAM_CHAT_ID: $(TELEGRAM_CHAT_ID)
+  - script: |
+      npm test
+    displayName: 'Run tests'
+
+  - script: |
+      npm run build
+    displayName: 'Build'
+
+  # Копирование собранных файлов в артефактную папку (если нужен артефакт)
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: '$(Build.SourcesDirectory)'
+      contents: |
+        index.js
+        dist/**/*
+        package*.json
+      targetFolder: '$(Build.ArtifactStagingDirectory)'
+    displayName: 'Prepare artifact'
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      artifactName: 'twitch-notifier'
+      targetPath: '$(Build.ArtifactStagingDirectory)'
+    displayName: 'Publish artifact'

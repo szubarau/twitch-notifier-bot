@@ -1,72 +1,37 @@
-# .azure/pipelines/azure-pipelines.yml
 name: $(Date:yyyyMMdd)$(Rev:.r)
-trigger: none
+
+resources:
+  repositories:
+  - repository: github_repo
+    type: github
+    name: sazubarev/twitch-notifier-bot  # Ваш репозиторий
+    endpoint: github-twitch-bot
+
+trigger:
+- main
 
 schedules:
-- cron: "*/5 * * * *"
-  displayName: "Twitch Stream Check"
+- cron: "*/15 * * * *"
+  displayName: "Check Stream"
   branches:
     include: [main]
-  always: true
 
 variables:
 - group: twitch_bot_secrets
-- name: PIP_CACHE_DIR
-  value: $(Pipeline.Workspace)/.pip-cache
 
 pool:
   vmImage: 'ubuntu-latest'
 
-jobs:
-- job: StreamMonitor
-  timeoutInMinutes: 10
-  steps:
+steps:
+- checkout: github_repo  # Указываем репозиторий
 
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.9'
-      addToPath: true
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.9'
 
-  - task: Cache@2
-    inputs:
-      key: 'pip | "$(Agent.OS)" | requirements.txt'
-      path: $(PIP_CACHE_DIR)
-      cacheHitVar: 'PIP_CACHE_RESTORED'
-
-  - script: |
-      pip install --upgrade pip
-      pip install -r requirements.txt
-    displayName: 'Install dependencies'
-    condition: ne(variables.PIP_CACHE_RESTORED, 'true')
-
-  - script: |
-      python src/main.py >> bot.log 2>&1 &
-      sleep 60
-      
-      # Форматирование сообщения в одну строку
-      MESSAGE="🟢 Pipeline $(Build.BuildNumber) started successfully"
-      curl -s -X POST "https://api.telegram.org/bot$(TELEGRAM_BOT_TOKEN)/sendMessage" \
-        -d "chat_id=$(TELEGRAM_CHANNEL_ID)" \
-        -d "text=$MESSAGE"
-    env:
-      TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
-      TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)
-      TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
-      TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
-    displayName: 'Run and notify'
-
-  - script: |
-      if [ $(Agent.JobStatus) == "Succeeded" ]; then
-        STATUS="🟢 SUCCESS"
-      else
-        STATUS="🔴 FAILED"
-        cat bot.log
-      fi
-      
-      # Все данные в одной строке с \n для переносов
-      MESSAGE="$STATUS Pipeline $(Build.BuildNumber)\nDuration: $(Pipeline.Duration)\nLogs: $(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
-      curl -s -X POST "https://api.telegram.org/bot$(TELEGRAM_BOT_TOKEN)/sendMessage" \
-        -d "chat_id=$(TELEGRAM_CHANNEL_ID)" \
-        -d "text=$MESSAGE"
-    condition: always()
-    displayName: 'Send final status'
+- script: |
+    pip install -r requirements.txt
+    python src/main.py
+  env:
+    TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
+    TELEGRAM_TOKEN: $(TELEGRAM_BOT_TOKEN)

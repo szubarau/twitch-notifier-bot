@@ -5,41 +5,26 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- checkout: self  # Получаем исходный код
+- checkout: self
 
 - task: UsePythonVersion@0
   inputs:
     versionSpec: '3.9'
     addToPath: true
 
-# Шаг установки зависимостей (проверяем наличие requirements.txt)
 - script: |
-    echo "Checking files in directory:"
-    ls -R
-    if [ -f "requirements.txt" ]; then
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-    elif [ -f "src/requirements.txt" ]; then
-      python -m pip install --upgrade pip
-      pip install -r src/requirements.txt
-    else
-      echo "No requirements.txt found. Installing default packages..."
-      pip install twitchio python-dotenv
-    fi
-  displayName: 'Install dependencies'
-
-# Основной шаг запуска бота
-- script: |
-    echo "Setting PYTHONPATH..."
-    export PYTHONPATH="${PYTHONPATH}:$(System.DefaultWorkingDirectory)"
-    echo "Current PYTHONPATH: $PYTHONPATH"
+    # Установка зависимостей
+    python -m pip install --upgrade pip
+    pip install twitchio python-dotenv
     
-    echo "Trying module-style launch..."
-    cd src && python -m main || (
-      echo "Fallback to direct launch..."
-      python src/main.py
-    )
+    # Создаем недостающие __init__.py
+    touch src/__init__.py
+    touch src/bot/__init__.py
+    
+    # Запуск с правильными путями
+    cd src
+    PYTHONPATH=$(pwd)/.. python main.py
   displayName: 'Run Twitch Bot'
   env:
-    TWITCH_BOT_TOKEN: $(TWITCH_BOT_TOKEN)  # Переменные окружения
+    TWITCH_BOT_TOKEN: $(TWITCH_BOT_TOKEN)
     TWITCH_CHANNEL: $(TWITCH_CHANNEL)

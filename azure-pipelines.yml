@@ -4,30 +4,36 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  python.version: '3.9'
+
 steps:
 - checkout: self
 
 - task: UsePythonVersion@0
   inputs:
-    versionSpec: '3.9'
+    versionSpec: $(python.version)
     addToPath: true
 
 - script: |
-    # Установка всех зависимостей
-    pip install twitchio python-dotenv requests
+    # Установка всех необходимых зависимостей
+    python -m pip install --upgrade pip
+    pip install twitchio python-dotenv requests python-telegram-bot
     
-    # Создаем правильную структуру пакетов
-    touch src/__init__.py
-    touch src/bot/__init__.py
+    # Создаем структуру пакетов
+    find . -name "__init__.py" -exec touch {} \; || true
     
-    # Преобразуем относительные импорты в абсолютные (временная мера)
-    sed -i 's/from \.\.config/from src.config/' src/bot/twitch_monitor.py
-    sed -i 's/from \.\.\./from src./' src/bot/*.py 2>/dev/null || true
-    
-    # Запускаем с правильным PYTHONPATH
+    # Проверяем установленные пакеты
+    pip list
+  displayName: 'Install dependencies'
+
+- script: |
+    # Запускаем бота с правильными путями
     cd src
     PYTHONPATH=$(pwd)/.. python main.py
   displayName: 'Run Twitch Bot'
   env:
     TWITCH_BOT_TOKEN: $(TWITCH_BOT_TOKEN)
     TWITCH_CHANNEL: $(TWITCH_CHANNEL)
+    TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
+    TELEGRAM_CHAT_ID: $(TELEGRAM_CHAT_ID)

@@ -1,52 +1,72 @@
-trigger:
-  - main
+# .azure/pipelines/azure-pipelines.yml
+name: $(Date:yyyyMMdd)$(Rev:.r)
+trigger: none
+
+schedules:
+- cron: "*/5 * * * *"
+  displayName: "Twitch Stream Check"
+  branches:
+    include: [main]
+  always: true
+
+variables:
+- group: twitch_bot_secrets
+- name: PIP_CACHE_DIR
+  value: $(Pipeline.Workspace)/.pip-cache
 
 pool:
   vmImage: 'ubuntu-latest'
 
-variables:
-  nodeVersion: '18.x'
-  # Переменные токенов, клиент-идентификаторы и т.д.
-  TELEGRAM_BOT_TOKEN: '$(TELEGRAM_BOT_TOKEN)'
-  TWITCH_CLIENT_ID: '$(TWITCH_CLIENT_ID)'
-  TWITCH_CLIENT_SECRET: '$(TWITCH_CLIENT_SECRET)'
-  TELEGRAM_CHANNEL_ID: '$(TELEGRAM_CHANNEL_ID)'
+jobs:
+- job: StreamMonitor
+  timeoutInMinutes: 10
+  steps:
 
-steps:
-  - task: UseNode@1
+  - task: UsePythonVersion@0
     inputs:
-      version: $(nodeVersion)
-    displayName: 'Install Node.js'
+      versionSpec: '3.9'
+      addToPath: true
+
+  - task: Cache@2
+    inputs:
+      key: 'pip | "$(Agent.OS)" | requirements.txt'
+      path: $(PIP_CACHE_DIR)
+      cacheHitVar: 'PIP_CACHE_RESTORED'
 
   - script: |
-      npm ci
+      pip install --upgrade pip
+      pip install -r requirements.txt
     displayName: 'Install dependencies'
+    condition: ne(variables.PIP_CACHE_RESTORED, 'true')
 
   - script: |
-      npm run lint
-    displayName: 'Lint'
+      python src/main.py >> bot.log 2>&1 &
+      sleep 60
+      
+      # Форматирование сообщения в одну строку
+      MESSAGE="🟢 Pipeline $(Build.BuildNumber) started successfully"
+      curl -s -X POST "https://api.telegram.org/bot$(TELEGRAM_BOT_TOKEN)/sendMessage" \
+        -d "chat_id=$(TELEGRAM_CHANNEL_ID)" \
+        -d "text=$MESSAGE"
+    env:
+      TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
+      TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)
+      TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
+      TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
+    displayName: 'Run and notify'
 
   - script: |
-      npm test
-    displayName: 'Run tests'
-
-  - script: |
-      npm run build
-    displayName: 'Build'
-
-  # Копирование собранных файлов в артефактную папку (если нужен артефакт)
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: '$(Build.SourcesDirectory)'
-      contents: |
-        index.js
-        dist/**/*
-        package*.json
-      targetFolder: '$(Build.ArtifactStagingDirectory)'
-    displayName: 'Prepare artifact'
-
-  - task: PublishPipelineArtifact@1
-    inputs:
-      artifactName: 'twitch-notifier'
-      targetPath: '$(Build.ArtifactStagingDirectory)'
-    displayName: 'Publish artifact'
+      if [ $(Agent.JobStatus) == "Succeeded" ]; then
+        STATUS="🟢 SUCCESS"
+      else
+        STATUS="🔴 FAILED"
+        cat bot.log
+      fi
+      
+      # Все данные в одной строке с \n для переносов
+      MESSAGE="$STATUS Pipeline $(Build.BuildNumber)\nDuration: $(Pipeline.Duration)\nLogs: $(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
+      curl -s -X POST "https://api.telegram.org/bot$(TELEGRAM_BOT_TOKEN)/sendMessage" \
+        -d "chat_id=$(TELEGRAM_CHANNEL_ID)" \
+        -d "text=$MESSAGE"
+    condition: always()
+    displayName: 'Send final status'

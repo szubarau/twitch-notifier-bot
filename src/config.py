@@ -1,6 +1,7 @@
 import os
 import sys
 
+
 class Config:
     def __init__(self):
         self.client_id = os.getenv('TWITCH_CLIENT_ID')

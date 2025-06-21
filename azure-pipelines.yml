@@ -2,36 +2,51 @@ name: $(Date:yyyyMMdd)$(Rev:.r)
 
 resources:
   repositories:
-  - repository: github_repo
-    type: github
-    name: sazubarev/twitch-notifier-bot  # Ваш репозиторий
-    endpoint: github-twitch-bot
+    - repository: github_repo
+      type: github
+      name: sazubarev/twitch-notifier-bot
+      endpoint: github-twitch-bot
 
 trigger:
-- main
+  - main
 
 schedules:
-- cron: "*/15 * * * *"
-  displayName: "Check Stream"
-  branches:
-    include: [main]
+  - cron: "*/15 * * * *"
+    displayName: "Check Stream"
+    branches:
+      include: [main]
 
 variables:
-- group: twitch_bot_secrets
+  - group: twitch_bot_secrets
 
 pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- checkout: github_repo  # Указываем репозиторий
+  - checkout: github_repo
 
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '3.9'
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.9'
 
-- script: |
-    pip install -r requirements.txt
-    python src/main.py
-  env:
-    TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
-    TELEGRAM_TOKEN: $(TELEGRAM_BOT_TOKEN)
+  - task: Cache@2
+    inputs:
+      key: 'pip | "$(Agent.OS)" | requirements.txt'
+      restoreKeys: |
+        pip | "$(Agent.OS)"
+      path: ~/.cache/pip
+
+  - script: |
+      pip install -r requirements.txt
+    displayName: 'Install dependencies'
+
+  - script: |
+      pytest tests/
+    displayName: 'Run Tests'
+
+  - script: |
+      python src/main.py
+    displayName: 'Start Bot'
+    env:
+      TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
+      TELEGRAM_TOKEN: $(TELEGRAM_BOT_TOKEN)

@@ -37,7 +37,7 @@ steps:
     displayName: 'Install dependencies'
 
   - script: |
-      python -m src.main
+      PYTHONPATH=src python src/main.py
     displayName: 'Start Bot'
     env:
       TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)

@@ -37,8 +37,9 @@ steps:
     displayName: 'Install dependencies'
 
   - script: |
-      python src/main.py
+      python -m src.main
     displayName: 'Start Bot'
     env:
       TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
       TELEGRAM_TOKEN: $(TELEGRAM_BOT_TOKEN)
+

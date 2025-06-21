@@ -3,6 +3,7 @@ from telegram.ext import Updater
 from telegram.constants import ParseMode
 from src.config import Config
 
+
 class TelegramNotifier:
     def __init__(self):
         self.bot = Bot(token=Config.TELEGRAM_TOKEN)

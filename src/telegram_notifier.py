@@ -5,14 +5,14 @@ from config import Config
 
 
 class TelegramNotifier:
-    def __init__(self):
-        self.bot = Bot(token=Config.TELEGRAM_TOKEN)
-        self.updater = Updater(token=Config.TELEGRAM_TOKEN, use_context=True)
+    def __init__(self, config):
+        self.config = config
+        self.bot = Bot(token=self.config.telegram_token)
 
     def send_notification(self, stream_data: dict):
         message = self._format_message(stream_data)
         self.bot.send_message(
-            chat_id=Config.CHANNEL_ID,
+            chat_id=self.config.telegram_channel,
             text=message,
             parse_mode=ParseMode.HTML
         )

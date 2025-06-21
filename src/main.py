@@ -1,5 +1,5 @@
 import time
-from src.twitch_monitor import TwitchMonitor
+from twitch_monitor import TwitchMonitor
 from bot.telegram_notifier import TelegramNotifier
 
 def main():

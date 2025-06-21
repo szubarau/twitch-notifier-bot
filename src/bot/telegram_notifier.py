@@ -1,7 +1,7 @@
-from telegram import Bot, Update
+from telegram import Bot
 from telegram.ext import Updater
 from telegram.constants import ParseMode
-from ..config import Config
+from config import Config
 
 class TelegramNotifier:
     def __init__(self):

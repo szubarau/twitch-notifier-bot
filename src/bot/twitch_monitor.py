@@ -1,7 +1,7 @@
 import requests
 import time
 from typing import Optional, Dict
-from src.config import Config
+from config import Config
 
 
 class TwitchMonitor:

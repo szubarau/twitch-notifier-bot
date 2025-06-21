@@ -34,11 +34,9 @@ steps:
 
   - script: |
       pip install -r requirements.txt
-    displayName: 'Install dependencies'
-
-  - script: |
+      pip install pytest
       pytest tests/
-    displayName: 'Run Tests'
+    displayName: 'Install dependencies and run tests'
 
   - script: |
       python src/main.py

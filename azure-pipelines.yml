@@ -4,7 +4,7 @@ trigger:
       - main
 
 schedules:
-  - cron: "0/10 17-20 * * *"  # UTC 15:00–20:45 → 18:00–23:45 по GMT+3
+  - cron: "0/15 17-20 * * *"  # Запуск каждые 15 минут с 18:00 до 23:45 по Минску (GMT+3)
     displayName: "Evening Stream Check"
     branches:
       include:
@@ -24,15 +24,21 @@ steps:
     inputs:
       versionSpec: '3.9'
 
+  - script: |
+      pip install -r requirements.txt
+    displayName: 'Install dependencies'
+
+  - script: |
+      mkdir -p ~/.cache/pip
+    displayName: 'Ensure pip cache directory exists'
+
   - task: Cache@2
     inputs:
       key: 'pip | "$(Agent.OS)" | requirements.txt'
       restoreKeys: |
         pip | "$(Agent.OS)"
       path: ~/.cache/pip
-
-  - script: pip install -r requirements.txt
-    displayName: 'Install dependencies'
+    displayName: 'Cache pip dependencies'
 
   - script: |
       PYTHONPATH=src python src/main.py
@@ -42,3 +48,4 @@ steps:
       TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)
       TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
       TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
+

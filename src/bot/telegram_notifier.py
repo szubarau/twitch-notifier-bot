@@ -1,5 +1,6 @@
 import os
 import logging
+import random
 from telegram import Bot
 from telegram.constants import ParseMode
 
@@ -35,11 +36,32 @@ class TelegramNotifier:
             f.write(stream_id)
 
     @staticmethod
-    def _format_message(data):
-        return (
-            "🎥 <b>Новый стрим начался!</b>\n\n"
-            f"📺 <b>{data.get('title', 'Без названия')}</b>\n"
-            f"🕹 Игра: <b>{data.get('game_name', 'Не указана')}</b>\n"
-            f"🔗 Смотреть: https://twitch.tv/zumich"
-        )
+    def _format_message(data: dict) -> str:
+        templates = [
+            (
+                "🎉 <b>Прямо сейчас стартует стрим!</b>\n\n"
+                f"📺 <b>{data.get('title', 'Без названия')}</b>\n"
+                f"🎮 Игра: <b>{data.get('game_name', 'Не указана')}</b>\n"
+                f"🔗 Смотри тут: https://twitch.tv/zumich"
+            ),
+            (
+                "🚨 <b>Zumich вышел в эфир!</b>\n\n"
+                f"🔴 Название: <b>{data.get('title', 'Без названия')}</b>\n"
+                f"🕹 Сейчас играет: <b>{data.get('game_name', 'Не указана')}</b>\n"
+                f"➡️ Подключайся: https://twitch.tv/zumich"
+            ),
+            (
+                "🔥 <b>Новый стрим уже начался!</b>\n\n"
+                f"📢 <b>{data.get('title', 'Без названия')}</b>\n"
+                f"🎲 Игра в эфире: <b>{data.get('game_name', 'Не указана')}</b>\n"
+                f"👀 Смотри: https://twitch.tv/zumich"
+            ),
+            (
+                "📡 <b>Внимание! Прямой эфир на канале Zumich!</b>\n\n"
+                f"🎥 Стрим: <b>{data.get('title', 'Без названия')}</b>\n"
+                f"🎮 Играет в: <b>{data.get('game_name', 'Не указана')}</b>\n"
+                f"▶️ Летс гоу: https://twitch.tv/zumich"
+            ),
+        ]
+        return random.choice(templates)
 

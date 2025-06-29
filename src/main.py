@@ -1,24 +1,20 @@
-import time
+import logging
 from config import Config
-from twitch_monitor import TwitchMonitor
-from telegram_notifier import TelegramNotifier
-
+from bot.twitch_monitor import TwitchMonitor
+from bot.telegram_notifier import TelegramNotifier
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
     config = Config()
-    monitor = TwitchMonitor()
+    monitor = TwitchMonitor(config)
     notifier = TelegramNotifier(config)
-    streamer = "zumich"
 
-    print("Бот запущен. Мониторинг стримов...")
-    while True:
-        stream_data = monitor.check_stream(streamer)
-        if stream_data:
-            notifier.send_notification(stream_data)
-            time.sleep(3600)  # Не спамить при долгих стримах
-        else:
-            time.sleep(300)  # Проверка каждые 5 минут
-
+    stream = monitor.check_stream_live()
+    if stream:
+        notifier.send_if_new(stream)
+    else:
+        logging.info("👀 Нечего отправлять.")
 
 if __name__ == "__main__":
     main()
+

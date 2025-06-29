@@ -4,7 +4,7 @@ trigger:
       - main
 
 schedules:
-  - cron: "0/15 15-20 * * *"  # Проверка каждые 15 минут с 18:00 до 23:45 по Минску (GMT+3)
+  - cron: "0/10 17-20 * * *"  # Проверка каждые 15 минут с 18:00 до 23:45 по Минску (GMT+3)
     displayName: "Evening Stream Check"
     branches:
       include:

@@ -4,7 +4,7 @@ trigger:
       - main
 
 schedules:
-  - cron: "0/15 17-20 * * *"  # Запуск каждые 15 минут с 18:00 до 23:45 по Минску (GMT+3)
+  - cron: "0/15 17-20 * * *"  # UTC 15:00–20:45 = 18:00–23:45 по GMT+3
     displayName: "Evening Stream Check"
     branches:
       include:
@@ -29,20 +29,22 @@ steps:
     displayName: 'Install dependencies'
 
   - script: |
-      mkdir -p ~/.cache/pip
-    displayName: 'Ensure pip cache directory exists'
+      export PIP_CACHE=$(python -m site --user-cache)
+      echo "##vso[task.setvariable variable=PIP_CACHE_DIR]$PIP_CACHE"
+      mkdir -p $PIP_CACHE/pip
+    displayName: 'Set up pip cache directory'
 
   - task: Cache@2
     inputs:
       key: 'pip | "$(Agent.OS)" | requirements.txt'
       restoreKeys: |
         pip | "$(Agent.OS)"
-      path: ~/.cache/pip
+      path: $(PIP_CACHE_DIR)/pip
     displayName: 'Cache pip dependencies'
 
   - script: |
       PYTHONPATH=src python src/main.py
-    displayName: 'Run Bot'
+    displayName: 'Run Twitch Notifier'
     env:
       TWITCH_CLIENT_ID: $(TWITCH_CLIENT_ID)
       TWITCH_CLIENT_SECRET: $(TWITCH_CLIENT_SECRET)

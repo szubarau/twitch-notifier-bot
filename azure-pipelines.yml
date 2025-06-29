@@ -4,7 +4,7 @@ trigger:
       - main
 
 schedules:
-  - cron: "0/15 17-20 * * *"  # UTC 15:00–20:45 = 18:00–23:45 по GMT+3
+  - cron: "0/15 15-20 * * *"  # Проверка каждые 15 минут с 18:00 до 23:45 по Минску (GMT+3)
     displayName: "Evening Stream Check"
     branches:
       include:
@@ -29,17 +29,17 @@ steps:
     displayName: 'Install dependencies'
 
   - script: |
-      export PIP_CACHE=$(python -m site --user-cache)
+      PIP_CACHE=$(python -c "import site; print(site.getuserbase())")/pip
       echo "##vso[task.setvariable variable=PIP_CACHE_DIR]$PIP_CACHE"
-      mkdir -p $PIP_CACHE/pip
-    displayName: 'Set up pip cache directory'
+      mkdir -p "$PIP_CACHE"
+    displayName: 'Prepare pip cache directory'
 
   - task: Cache@2
     inputs:
       key: 'pip | "$(Agent.OS)" | requirements.txt'
       restoreKeys: |
         pip | "$(Agent.OS)"
-      path: $(PIP_CACHE_DIR)/pip
+      path: $(PIP_CACHE_DIR)
     displayName: 'Cache pip dependencies'
 
   - script: |

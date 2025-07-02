@@ -1,6 +1,7 @@
 import os
 import logging
 import random
+from typing import Optional
 from telegram import Bot
 from telegram.constants import ParseMode
 
@@ -43,7 +44,7 @@ class TelegramNotifier:
         except Exception as e:
             logging.error(f"❌ Ошибка при отправке фото: {e}")
 
-    def _get_last_sent_id(self) -> str | None:
+    def _get_last_sent_id(self) -> Optional[str]:
         if os.path.exists(self.id_file):
             with open(self.id_file, "r") as f:
                 return f.read().strip()

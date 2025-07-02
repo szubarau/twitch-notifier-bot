@@ -11,8 +11,6 @@ async def main():
     notifier = TelegramNotifier(config)
 
     stream = monitor.check_stream_live()
-    await notifier.send_status(stream_active=bool(stream))
-
     if stream:
         await notifier.send_if_new(stream)
 

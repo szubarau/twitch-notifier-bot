@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import random
 from typing import Optional
@@ -14,9 +15,9 @@ class TelegramNotifier:
 
     async def send_if_new(self, stream_data: dict):
         stream_id = str(stream_data.get("id"))
-        if stream_id == self._get_last_sent_id():
-            logging.info("🔁 Стрим уже анонсирован ранее.")
-            return
+        if self.should_abort_pipeline(stream_id):
+            logging.info("🛑 Стрим уже был анонсирован. Завершаем пайплайн.")
+            sys.exit(0)  # Прерывание пайплайна без ошибок
 
         await self.send_announcement_with_image(stream_data)
         self._save_last_sent_id(stream_id)
@@ -44,6 +45,10 @@ class TelegramNotifier:
         except Exception as e:
             logging.error(f"❌ Ошибка при отправке фото: {e}")
 
+    def should_abort_pipeline(self, stream_id: str) -> bool:
+        last_id = self._get_last_sent_id()
+        return last_id == stream_id
+
     def _get_last_sent_id(self) -> Optional[str]:
         if os.path.exists(self.id_file):
             with open(self.id_file, "r") as f:
@@ -53,3 +58,4 @@ class TelegramNotifier:
     def _save_last_sent_id(self, stream_id: str):
         with open(self.id_file, "w") as f:
             f.write(stream_id)
+

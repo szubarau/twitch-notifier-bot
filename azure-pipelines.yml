@@ -27,7 +27,7 @@ steps:
   - script: pip install -r requirements.txt
     displayName: 'Install dependencies'
 
-  # ⚙️ pip cache
+  # 🧠 pip cache
   - script: |
       PIP_CACHE=$(python -c "import site; print(site.getuserbase())")/pip
       echo "##vso[task.setvariable variable=PIP_CACHE_DIR]$PIP_CACHE"
@@ -42,7 +42,7 @@ steps:
       path: $(PIP_CACHE_DIR)
     displayName: 'Cache pip dependencies'
 
-  # 🔄 Загрузка кеша стрим ID, если он существует
+  # 🔄 Восстановление кеша last_stream_id.txt (если есть)
   - task: Cache@2
     inputs:
       key: 'last-stream-id'
@@ -61,16 +61,19 @@ steps:
       TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
       TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
 
-  # ✅ Проверка: есть ли файл, прежде чем кешировать
+  # ✅ Проверка наличия файла перед кешированием
   - script: |
       if [ -f last_stream_id.txt ]; then
-        echo "✅ stream ID найден — готов к кешированию."
+        echo "✅ Файл найден — обновляем кеш"
+        echo "##vso[task.setvariable variable=stream_id_exists]true"
       else
-        echo "⚠️ stream ID не найден — кеш обновлять не будем."
+        echo "⚠️ Файл не найден — кеш не обновляется"
+        echo "##vso[task.setvariable variable=stream_id_exists]false"
       fi
-    displayName: 'Verify stream ID before caching'
+    displayName: 'Check stream ID file existence'
 
   - task: Cache@2
+    condition: eq(variables['stream_id_exists'], 'true')
     inputs:
       key: 'last-stream-id'
       path: last_stream_id.txt

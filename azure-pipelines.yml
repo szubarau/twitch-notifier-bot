@@ -42,16 +42,17 @@ steps:
       path: $(PIP_CACHE_DIR)
     displayName: 'Cache pip dependencies'
 
-  # 🔄 Восстановление кеша last_stream_id.txt (если есть)
+  # 🔄 Попытка загрузить кеш стрим-ID (если уже создан ранее)
   - task: Cache@2
     inputs:
       key: 'last-stream-id'
       path: last_stream_id.txt
       restoreKeys: last-stream-id
     displayName: 'Restore stream ID cache'
+    condition: always()
     continueOnError: true
 
-  # 🚀 Запуск Twitch-бота
+  # 🚀 Запуск Twitch Notifier
   - script: |
       PYTHONPATH=src python src/main.py
     displayName: 'Run Twitch Notifier'
@@ -61,23 +62,23 @@ steps:
       TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
       TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
 
-  # ✅ Проверка наличия файла перед кешированием
+  # ✅ Проверка: есть ли файл для кеша
   - script: |
       if [ -f last_stream_id.txt ]; then
-        echo "✅ Файл найден — обновляем кеш"
+        echo "✅ Файл stream ID найден — обновляем кеш."
         echo "##vso[task.setvariable variable=stream_id_exists]true"
       else
-        echo "⚠️ Файл не найден — кеш не обновляется"
+        echo "⚠️ Файл stream ID отсутствует — кеш пропускаем."
         echo "##vso[task.setvariable variable=stream_id_exists]false"
       fi
     displayName: 'Check stream ID file existence'
 
   - task: Cache@2
-    condition: eq(variables['stream_id_exists'], 'true')
     inputs:
       key: 'last-stream-id'
       path: last_stream_id.txt
     displayName: 'Update stream ID cache'
+    condition: eq(variables['stream_id_exists'], 'true')
     continueOnError: true
 
 

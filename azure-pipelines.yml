@@ -27,13 +27,16 @@ steps:
   - script: pip install -r requirements.txt
     displayName: 'Install dependencies'
 
+  # ⚡️ Кеш для pip
   - task: Cache@2
     inputs:
       key: 'pip | "$(Agent.OS)" | requirements.txt'
+      restoreKeys: pip | "$(Agent.OS)"
       path: $(PIP_CACHE_DIR)
-    displayName: 'Cache pip'
+    displayName: 'Cache pip dependencies'
     continueOnError: true
 
+  # 📥 Загрузка кеша стрим-ID
   - task: Cache@2
     inputs:
       key: 'last-stream-id'
@@ -43,6 +46,7 @@ steps:
     condition: always()
     continueOnError: true
 
+  # 🚀 Запуск Telegram-бота
   - script: |
       PYTHONPATH=src python src/main.py
     displayName: 'Run Twitch Notifier'
@@ -52,6 +56,7 @@ steps:
       TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
       TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
 
+  # 🧷 Проверка наличия файла
   - script: |
       if [ -f last_stream_id.txt ]; then
         echo "✅ stream ID найден — кеш обновим"
@@ -62,6 +67,7 @@ steps:
       fi
     displayName: 'Check stream ID file'
 
+  # 📦 Обновление кеша
   - task: Cache@2
     condition: eq(variables['stream_id_exists'], 'true')
     inputs:

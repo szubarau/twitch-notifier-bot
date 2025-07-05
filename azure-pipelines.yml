@@ -4,8 +4,8 @@ trigger:
       - main
 
 schedules:
-  - cron: "0/10 17-20 * * *"  # Запуск каждые 15 минут с 18:00 до 23:45 по Минску (GMT+3)
-    displayName: "Evening Twitch Check"
+  - cron: "0/15 15-20 * * *"  # Каждые 15 мин с 18:00 до 23:45 по Минску
+    displayName: "Evening Stream Check"
     branches:
       include:
         - main
@@ -24,15 +24,15 @@ steps:
     inputs:
       versionSpec: '3.9'
 
-  # 📥 Скачать артефакт с предыдущим ID стрима
-  - download: current-stream
-    artifact: stream-cache
-    displayName: 'Download last stream ID'
+  # ⬇️ Попытка загрузки артефакта (если он был создан ранее)
+  - download: stream-cache
+    displayName: 'Download last stream ID (if exists)'
+    continueOnError: true
 
   - script: pip install -r requirements.txt
     displayName: 'Install dependencies'
 
-  # ⚙️ Настройка кеша pip
+  # 📦 Настройка pip кеша
   - script: |
       PIP_CACHE=$(python -c "import site; print(site.getuserbase())")/pip
       echo "##vso[task.setvariable variable=PIP_CACHE_DIR]$PIP_CACHE"
@@ -57,7 +57,7 @@ steps:
       TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
       TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
 
-  # 📤 Сохранить ID стрима как артефакт
+  # 🧷 Сохранение ID как артефакт
   - publish: last_stream_id.txt
     artifact: stream-cache
     displayName: 'Upload updated stream ID'

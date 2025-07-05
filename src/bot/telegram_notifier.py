@@ -11,12 +11,12 @@ class TelegramNotifier:
     def __init__(self, config):
         self.config = config
         self.bot = Bot(token=self.config.telegram_token)
-        self.id_file = "last_stream_id.txt"
 
     async def send_if_new(self, stream_data: dict):
         stream_id = str(stream_data.get("id"))
+        last_id = self._get_last_sent_id()
 
-        if self._get_last_sent_id() == stream_id:
+        if last_id == stream_id:
             logging.info("🛑 Стрим уже анонсирован. Завершаем пайплайн.")
             sys.exit(0)
 
@@ -46,17 +46,17 @@ class TelegramNotifier:
             logging.error(f"❌ Ошибка при отправке Telegram-сообщения: {e}")
 
     def _get_last_sent_id(self) -> Optional[str]:
-        if os.path.exists(self.id_file):
-            try:
-                with open(self.id_file, "r") as f:
+        try:
+            if os.path.exists("last_stream_id.txt"):
+                with open("last_stream_id.txt", "r") as f:
                     return f.read().strip()
-            except Exception as e:
-                logging.warning(f"⚠️ Не удалось прочитать ID: {e}")
+        except Exception as e:
+            logging.warning(f"⚠️ Не удалось прочитать ID: {e}")
         return None
 
     def _save_last_sent_id(self, stream_id: str):
         try:
-            with open(self.id_file, "w") as f:
+            with open("last_stream_id.txt", "w") as f:
                 f.write(stream_id)
             logging.info("💾 ID стрима сохранён.")
         except Exception as e:

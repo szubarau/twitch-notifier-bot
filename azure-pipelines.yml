@@ -4,8 +4,8 @@ trigger:
       - main
 
 schedules:
-  - cron: "0/10 17-20 * * *"  # Каждые 15 минут с 18:00 до 23:45 по Минску
-    displayName: "Evening Twitch Check"
+  - cron: "0/10 17-20 * * *"
+    displayName: "Evening Stream Check"
     branches:
       include:
         - main
@@ -27,7 +27,6 @@ steps:
   - script: pip install -r requirements.txt
     displayName: 'Install dependencies'
 
-  # ⚙️ Подготовка pip-кеша
   - script: |
       PIP_CACHE=$(python -c "import site; print(site.getuserbase())")/pip
       echo "##vso[task.setvariable variable=PIP_CACHE_DIR]$PIP_CACHE"
@@ -42,7 +41,7 @@ steps:
       path: $(PIP_CACHE_DIR)
     displayName: 'Cache pip dependencies'
 
-  # 🧷 Загрузка last_stream_id.txt из кеша
+  # 🧷 Загрузка last_stream_id.txt из кеша, если есть
   - task: Cache@2
     inputs:
       key: 'last-stream-id'
@@ -61,11 +60,22 @@ steps:
       TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
       TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
 
-  # 💾 Сохранение last_stream_id.txt обратно в кеш
+  # 💾 Сохранение нового stream ID в кеш, если файл появился
+  - script: |
+      if [ -f last_stream_id.txt ]; then
+        echo "Stream ID file exists. Updating cache."
+      else
+        echo "Stream ID file not found. Skipping cache update."
+      fi
+    displayName: 'Check if stream ID file exists'
+
   - task: Cache@2
     inputs:
       key: 'last-stream-id'
       path: last_stream_id.txt
     displayName: 'Update stream ID cache'
+    condition: and(succeeded(), exists('last_stream_id.txt'))
+    continueOnError: true
+
 
 

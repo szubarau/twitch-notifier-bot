@@ -4,7 +4,7 @@ trigger:
       - main
 
 schedules:
-  - cron: "0/10 17-20 * * *"
+  - cron: "0/15 15-20 * * *"
     displayName: "Evening Stream Check"
     branches:
       include:
@@ -27,16 +27,16 @@ steps:
   - script: pip install -r requirements.txt
     displayName: 'Install dependencies'
 
-  # ⚡️ Кеш для pip
+  # ⚡️ pip кеш
   - task: Cache@2
     inputs:
       key: 'pip | "$(Agent.OS)" | requirements.txt'
       restoreKeys: pip | "$(Agent.OS)"
       path: $(PIP_CACHE_DIR)
-    displayName: 'Cache pip dependencies'
+    displayName: 'Cache pip'
     continueOnError: true
 
-  # 📥 Загрузка кеша стрим-ID
+  # 📥 Восстановление кеша стрим-ID
   - task: Cache@2
     inputs:
       key: 'last-stream-id'
@@ -46,7 +46,7 @@ steps:
     condition: always()
     continueOnError: true
 
-  # 🚀 Запуск Telegram-бота
+  # 🚀 Запуск Twitch-бота
   - script: |
       PYTHONPATH=src python src/main.py
     displayName: 'Run Twitch Notifier'
@@ -56,13 +56,13 @@ steps:
       TELEGRAM_BOT_TOKEN: $(TELEGRAM_BOT_TOKEN)
       TELEGRAM_CHANNEL_ID: $(TELEGRAM_CHANNEL_ID)
 
-  # 🧷 Проверка наличия файла
+  # 🧷 Проверка наличия stream ID-файла
   - script: |
       if [ -f last_stream_id.txt ]; then
-        echo "✅ stream ID найден — кеш обновим"
+        echo "✅ Файл найден — обновляем кеш"
         echo "##vso[task.setvariable variable=stream_id_exists]true"
       else
-        echo "⚠️ stream ID отсутствует — кеш не обновляем"
+        echo "⚠️ Файл отсутствует — пропускаем кеширование"
         echo "##vso[task.setvariable variable=stream_id_exists]false"
       fi
     displayName: 'Check stream ID file'

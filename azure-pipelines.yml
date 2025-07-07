@@ -27,12 +27,12 @@ steps:
   - script: pip install -r requirements.txt
     displayName: 'Install dependencies'
 
-  # 📦 pip кеш (системный путь)
+  # 📦 pip кеш (абсолютный путь)
   - task: Cache@2
     inputs:
       key: 'pip | "$(Agent.OS)" | requirements.txt'
       restoreKeys: pip | "$(Agent.OS)"
-      path: $HOME/.cache/pip
+      path: /home/vsts/.cache/pip
     displayName: 'Cache pip dependencies'
     continueOnError: true
 

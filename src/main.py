@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import sys
 from config import Config
 from bot.twitch_monitor import TwitchMonitor
 from bot.telegram_notifier import TelegramNotifier
@@ -15,5 +16,7 @@ async def main():
         await notifier.send_if_new(stream)
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
+    try:
+        asyncio.run(main())
+    except SystemExit as e:
+        sys.exit(e.code)

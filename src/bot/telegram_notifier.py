@@ -6,11 +6,15 @@ from typing import Optional
 from telegram import Bot
 from telegram.constants import ParseMode
 
+CACHE_DIR = "stream_cache"
+ID_PATH = os.path.join(CACHE_DIR, "last_stream_id.txt")
+
 
 class TelegramNotifier:
     def __init__(self, config):
         self.config = config
         self.bot = Bot(token=self.config.telegram_token)
+        os.makedirs(CACHE_DIR, exist_ok=True)
 
     async def send_if_new(self, stream_data: dict):
         stream_id = str(stream_data.get("id"))
@@ -46,20 +50,21 @@ class TelegramNotifier:
             logging.error(f"❌ Ошибка при отправке Telegram-сообщения: {e}")
 
     def _get_last_sent_id(self) -> Optional[str]:
-        try:
-            if os.path.exists("last_stream_id.txt"):
-                with open("last_stream_id.txt", "r") as f:
+        if os.path.exists(ID_PATH):
+            try:
+                with open(ID_PATH, "r") as f:
                     return f.read().strip()
-        except Exception as e:
-            logging.warning(f"⚠️ Не удалось прочитать ID: {e}")
+            except Exception as e:
+                logging.warning(f"⚠️ Не удалось прочитать ID: {e}")
         return None
 
     def _save_last_sent_id(self, stream_id: str):
         try:
-            with open("last_stream_id.txt", "w") as f:
+            with open(ID_PATH, "w") as f:
                 f.write(stream_id)
             logging.info("💾 ID стрима сохранён.")
         except Exception as e:
             logging.error(f"❌ Ошибка при сохранении ID: {e}")
+
 
 

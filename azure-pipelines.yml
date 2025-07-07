@@ -59,6 +59,6 @@ steps:
   # ✅ Проверка наличия файла ID
   - script: |
       if [ -f stream_cache/last_stream_id.txt ]; then
-        echo "✅ stream ID найден
+        echo "✅ stream ID найден"
 
 
